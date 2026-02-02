@@ -21,8 +21,7 @@ class LaravelAppCollector implements CollectorInterface
         try {
             $url = $this->getHealthUrl($node);
 
-            $response = Http::timeout(config('monitor.laravel_app.timeout'))
-                ->get($url);
+            $response = $this->buildRequest($node)->get($url);
 
             return $response->successful();
         } catch (\Exception $e) {
@@ -46,8 +45,7 @@ class LaravelAppCollector implements CollectorInterface
 
         for ($attempt = 0; $attempt <= $retries; $attempt++) {
             try {
-                $response = Http::timeout(config('monitor.laravel_app.timeout'))
-                    ->get($url);
+                $response = $this->buildRequest($node)->get($url);
 
                 if ($response->successful()) {
                     break;
@@ -155,6 +153,18 @@ class LaravelAppCollector implements CollectorInterface
         }
 
         return $metrics;
+    }
+
+    protected function buildRequest(Node $node): \Illuminate\Http\Client\PendingRequest
+    {
+        $request = Http::timeout(config('monitor.laravel_app.timeout'));
+
+        $token = $node->credentials['health_token'] ?? null;
+        if ($token) {
+            $request = $request->withToken($token);
+        }
+
+        return $request;
     }
 
     protected function getHealthUrl(Node $node): string

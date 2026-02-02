@@ -7,17 +7,11 @@ use App\Http\Controllers\Tools\ColorPickerController;
 use App\Http\Controllers\Tools\JsonFormatterController;
 use App\Http\Controllers\Tools\TextCaseController;
 use App\Http\Controllers\Tools\UuidGeneratorController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return redirect('/dashboard');
 });
 
 Route::get('/dashboard', function () {

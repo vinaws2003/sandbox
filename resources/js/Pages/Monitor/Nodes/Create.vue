@@ -21,6 +21,7 @@ const form = useForm({
         password: '',
         database: '',
         health_endpoint: '/health',
+        health_token: '',
     },
 });
 
@@ -191,15 +192,27 @@ function getDefaultPort(type) {
                             <template v-else-if="form.type === 'laravel_app'">
                                 <div class="border-t pt-6">
                                     <h3 class="text-sm font-medium text-gray-900">Health Check Configuration</h3>
-                                    <div class="mt-4">
-                                        <InputLabel for="health_endpoint" value="Health Endpoint" />
-                                        <TextInput
-                                            id="health_endpoint"
-                                            v-model="form.credentials.health_endpoint"
-                                            type="text"
-                                            class="mt-1 block w-full"
-                                            placeholder="/health"
-                                        />
+                                    <div class="mt-4 grid grid-cols-1 gap-4">
+                                        <div>
+                                            <InputLabel for="health_endpoint" value="Health Endpoint" />
+                                            <TextInput
+                                                id="health_endpoint"
+                                                v-model="form.credentials.health_endpoint"
+                                                type="text"
+                                                class="mt-1 block w-full"
+                                                placeholder="/health"
+                                            />
+                                        </div>
+                                        <div>
+                                            <InputLabel for="health_token" value="Health Token (optional)" />
+                                            <TextInput
+                                                id="health_token"
+                                                v-model="form.credentials.health_token"
+                                                type="password"
+                                                class="mt-1 block w-full"
+                                                placeholder="Bearer token for authentication"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </template>

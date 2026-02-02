@@ -25,6 +25,7 @@ class StoreNodeRequest extends FormRequest
             'credentials.password' => ['nullable', 'string', 'max:255'],
             'credentials.database' => ['nullable', 'string', 'max:255'],
             'credentials.health_endpoint' => ['nullable', 'string', 'max:255'],
+            'credentials.health_token' => ['nullable', 'string', 'max:255'],
         ];
     }
 
