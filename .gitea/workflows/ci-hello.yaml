@@ -2,7 +2,7 @@ name: ci-hello
 on: [push]
 jobs:
   hello:
-    runs-on: alpine
+    runs-on: nas
     steps:
       - run: |
           echo "✅ Gitea Actions runner OK"
