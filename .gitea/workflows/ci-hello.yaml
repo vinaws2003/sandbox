@@ -4,5 +4,8 @@ jobs:
   hello:
     runs-on: alpine
     steps:
-      - run: echo "✅ Gitea Actions runner executing — runner $(hostname), ref $GITHUB_REF, sha $GITHUB_SHA"
-      - run: echo "reachability check from job container:" && (nc -z -w3 10.147.17.3 22 && echo "  atsvr(ZT):22 OK" || echo "  atsvr(ZT):22 unreachable")
+      - run: |
+          echo "✅ Gitea Actions runner OK"
+          echo "runner host: $(hostname)"
+          echo "repo: $GITHUB_REPOSITORY  ref: $GITHUB_REF  sha: $GITHUB_SHA"
+          echo "alpine job container: $(cat /etc/alpine-release 2>/dev/null)"
