@@ -12,16 +12,23 @@ set -eu
 APP_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PHP=/usr/local/bin/php84
 QUEUE=default
+PIDFILE="$APP_DIR/storage/worker.pid"
 
-# Already running for this app? (match the app dir to avoid colliding with other apps)
-if pgrep -f "artisan queue:work .*${APP_DIR}/" >/dev/null 2>&1; then
-    exit 0
+# Already running for this app? Verify the recorded pid is alive AND is our worker
+# (pidfile is per-app under its own storage/, so this is app-scoped).
+if [ -f "$PIDFILE" ]; then
+    pid="$(cat "$PIDFILE" 2>/dev/null || true)"
+    if [ -n "${pid:-}" ] && kill -0 "$pid" 2>/dev/null \
+       && tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q "queue:work"; then
+        exit 0
+    fi
 fi
 
 cd "$APP_DIR" || exit 1
 mkdir -p storage/logs
-nohup "$PHP" artisan queue:work "$QUEUE" \
+# NOTE: --queue=<name>, NOT a positional arg (positional = connection name).
+nohup "$PHP" artisan queue:work --queue="$QUEUE" \
     --sleep=3 --tries=3 --backoff=10 --max-time=3600 --max-jobs=1000 \
     >> storage/logs/worker.log 2>&1 &
-
-echo "[queue-watchdog] started worker for ${APP_DIR} (queue=${QUEUE})"
+echo $! > "$PIDFILE"
+echo "[queue-watchdog] started worker pid $! for ${APP_DIR} (queue=${QUEUE})"
