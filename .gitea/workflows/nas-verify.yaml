@@ -8,20 +8,22 @@ jobs:
     runs-on: nas
     steps:
       - name: prepare ssh key
+        env:
+          DEPLOY_KEY: ${{ secrets.NAS_DEPLOY_KEY }}
         run: |
           command -v ssh >/dev/null || (apt-get update -qq && apt-get install -y -qq openssh-client)
           install -d -m 700 ~/.ssh
-          printf '%s\n' "${{ secrets.NAS_DEPLOY_KEY }}" > ~/.ssh/deploy
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy
           chmod 600 ~/.ssh/deploy
       - name: verify all NASes (read-only)
         run: |
           SSH="ssh -i $HOME/.ssh/deploy -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
-          NODES="ajtsvr:192.168.0.2:22:vincent ajtsvr2:192.168.0.4:22:vincent atsvr2:10.147.17.2:22:vincent atsvr:10.147.17.3:37510:angws"
+          NODES="ajtsvr:192.168.0.2:22:vincent ajtsvr2:192.168.0.4:22:vincent atsvr2:10.147.17.2:22:vincent atsvr:10.147.17.3:22:angws"
           ok=0; fail=0
           for entry in $NODES; do
             name=${entry%%:*}; rest=${entry#*:}; host=${rest%%:*}; rest=${rest#*:}; port=${rest%%:*}; user=${rest##*:}
             echo "==== $name ($user@$host:$port) ===="
-            if $SSH -p "$port" "$user@$host" 'echo "  host=$(hostname) user=$(whoami)"; uptime | sed "s/^/  /"; if [ -d /volume1/web ]; then echo "  /volume1/web: $(ls /volume1/web | wc -l) dirs"; fi'; then
+            if $SSH -p "$port" "$user@$host" 'echo "  host=$(hostname) user=$(whoami)"; uptime | sed "s/^/  /"; [ -d /volume1/web ] && echo "  /volume1/web: $(ls /volume1/web | wc -l) dirs"'; then
               echo "  RESULT: $name OK"; ok=$((ok+1))
             else
               echo "  RESULT: $name UNREACHABLE/AUTH-FAIL"; fail=$((fail+1))
