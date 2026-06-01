@@ -1,0 +1,8 @@
+name: ci-hello
+on: [push]
+jobs:
+  hello:
+    runs-on: alpine
+    steps:
+      - run: echo "✅ Gitea Actions runner executing — runner $(hostname), ref $GITHUB_REF, sha $GITHUB_SHA"
+      - run: echo "reachability check from job container:" && (nc -z -w3 10.147.17.3 22 && echo "  atsvr(ZT):22 OK" || echo "  atsvr(ZT):22 unreachable")
