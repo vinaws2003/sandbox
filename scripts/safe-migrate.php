@@ -3,16 +3,23 @@
  * scripts/safe-migrate.php — run `php artisan migrate --force` exactly once
  * across the 4-NAS cluster, guarded by a cluster-wide lock.
  *
- * All 4 NASes share one database, so a deploy must migrate once. The first
- * caller to win the lock migrates; the rest see it held and skip (the shared
- * DB is already current). The mutex is a MySQL GET_LOCK on the shared DB:
- *   - reachable from every node by definition (migrate needs the DB);
+ * All 4 NASes share one database, so a deploy must migrate once. The deploy
+ * workflow runs this from ONE designated node, so every migrate invocation
+ * reaches the same DB endpoint; the lock then serializes *overlapping deploys*
+ * of the same app — the first acquires and migrates, the rest skip (the DB is
+ * already current). The mutex is a MySQL GET_LOCK:
+ *   - reachable from the migrating node by definition (migrate needs the DB);
  *   - session-scoped, so a crashed migrator auto-releases (no wedged deploys);
- *   - uniform across nodes — unlike the Redis CLI client, whose availability
- *     diverges per node (verified: some apps have neither ext-redis at the CLI
- *     nor predis vendored), which makes a Redis-from-CLI lock unreliable here.
  *   - named per-app (GET_LOCK names are server-global) so concurrent deploys
  *     of different apps don't falsely block each other.
+ *
+ * Why not a Redis lock: the CLI redis client diverges per node (verified: some
+ * apps have neither ext-redis at the CLI nor predis vendored). Why not a
+ * cross-node lock: nodes connect to different DB endpoints (direct vs local
+ * ProxySQL) and the cluster is Galera, where GET_LOCK is node-local — so no
+ * primitive locks uniformly across nodes. Single-designated-node migrate side-
+ * steps that: if that node is down during a deploy, the migrate step fails
+ * loudly (code still deployed) rather than racing migrations.
  *
  * Usage:  php84 scripts/safe-migrate.php
  *         php84 scripts/safe-migrate.php --hold=15   # debug: hold lock N s (contention test)
@@ -42,7 +49,7 @@ $lock = 'migrate_'.$db->getDatabaseName();        // per-app scope on the server
 // GET_LOCK(name, 0): 1 = acquired, 0 = held by another session, NULL = error.
 $got = (int) ($db->selectOne('SELECT GET_LOCK(?, 0) AS l', [$lock])->l ?? 0);
 if ($got !== 1) {
-    fwrite(STDOUT, "[safe-migrate] migrate lock held by another node — DB already current, skipping\n");
+    fwrite(STDOUT, "[safe-migrate] migrate lock held by a concurrent deploy — DB already current, skipping\n");
     exit(0);
 }
 
