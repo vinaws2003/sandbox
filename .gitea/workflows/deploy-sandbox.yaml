@@ -1,0 +1,29 @@
+name: deploy-sandbox
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: nas
+    steps:
+      - name: prepare ssh key
+        env:
+          KEY_B64: ${{ secrets.NAS_DEPLOY_KEY_B64 }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s' "$KEY_B64" | base64 -d > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+      - name: deploy sandbox to all NASes
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=12"
+          APP=sandbox.angws.org
+          NODES="ajtsvr:192.168.0.2:22:vincent ajtsvr2:192.168.0.4:22:vincent atsvr2:10.147.17.2:22:vincent atsvr:10.147.17.3:22:angws"
+          ok=0; fail=0
+          for e in $NODES; do
+            n=${e%%:*}; r=${e#*:}; h=${r%%:*}; r=${r#*:}; p=${r%%:*}; u=${r##*:}
+            echo "==== $n ===="
+            if $SSH -p "$p" "$u@$h" "sudo -n /usr/local/bin/gitea-deploy.sh $APP"; then ok=$((ok+1)); else echo "  FAILED: $n"; fail=$((fail+1)); fi
+          done
+          echo "================================"
+          echo "SUMMARY: $ok deployed, $fail failed"
