@@ -27,3 +27,11 @@ jobs:
           done
           echo "================================"
           echo "SUMMARY: $ok deployed, $fail failed"
+          [ "$fail" -eq 0 ] || exit 1
+      - name: migrate (Redis-locked, runs once across the shared DB)
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=12"
+          APP=sandbox.angws.org
+          # Run on one node only; the Redis lock makes this idempotent/safe even
+          # if a future per-node deploy path also calls safe-migrate on every node.
+          $SSH -p 22 vincent@192.168.0.2 "cd /volume1/web/$APP && /usr/local/bin/php84 scripts/safe-migrate.php"
